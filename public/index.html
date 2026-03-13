@@ -977,7 +977,10 @@ async function openWidget() {
           body: JSON.stringify({ exchange_token: exchangeToken }),
         });
         const data = await res.json();
-        if (!data.ok) throw new Error(data.error);
+        if (!res.ok || !data.ok) {
+          const detail = data?.detail ? `: ${JSON.stringify(data.detail)}` : '';
+          throw new Error((data.error || 'No se pudo intercambiar el exchange token') + detail);
+        }
         toast('✓ Banco conectado', 'green');
         document.getElementById('connect-banner').style.display = 'none';
         await syncData();

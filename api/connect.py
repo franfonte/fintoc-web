@@ -23,7 +23,14 @@ class handler(BaseHTTPRequestHandler):
             self._json({"error": str(e)}, 401); return
 
         length = int(self.headers.get("Content-Length", 0))
-        body   = json.loads(self.rfile.read(length))
+        if not length:
+            self._json({"error": "Request body required"}, 400); return
+
+        try:
+            body = json.loads(self.rfile.read(length))
+        except json.JSONDecodeError:
+            self._json({"error": "Invalid JSON body"}, 400); return
+
         exchange_token = body.get("exchange_token")
 
         if not exchange_token:
@@ -49,6 +56,9 @@ class handler(BaseHTTPRequestHandler):
             self._json({"error": f"Request failed: {e}"}, 502); return
 
         link_token  = fintoc_link.get("link_token") or fintoc_link.get("id")
+        if not link_token:
+            self._json({"error": "Fintoc exchange returned no link token", "detail": fintoc_link}, 502); return
+
         institution = (fintoc_link.get("institution") or {}).get("name", "")
 
         # Save to Supabase
