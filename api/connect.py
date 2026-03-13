@@ -39,8 +39,14 @@ class handler(BaseHTTPRequestHandler):
             )
             r.raise_for_status()
             fintoc_link = r.json()
+        except requests.exceptions.HTTPError as e:
+            try:
+                fintoc_error = e.response.json()
+            except Exception:
+                fintoc_error = e.response.text
+            self._json({"error": "Fintoc exchange failed", "detail": fintoc_error}, 502); return
         except Exception as e:
-            self._json({"error": f"Fintoc exchange failed: {e}"}, 502); return
+            self._json({"error": f"Request failed: {e}"}, 502); return
 
         link_token  = fintoc_link.get("link_token") or fintoc_link.get("id")
         institution = (fintoc_link.get("institution") or {}).get("name", "")

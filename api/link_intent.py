@@ -1,6 +1,17 @@
 """
 POST /api/link_intent
-Creates a Fintoc Link Intent and returns the widget_token needed to open the Widget.
+
+Step 1 of the Fintoc lifecycle: creates a Link Intent and returns a
+widget_token to the frontend so the Fintoc Widget can be opened.
+
+Key rules enforced here:
+  - product must be "movements", country "cl"
+  - holder_type is "individual" or "business" (validated)
+  - internal user identifiers go inside `metadata`, NEVER in `username`
+    (`username` is reserved for the bank credential the user types in the Widget)
+  - Fintoc HTTP errors are unpacked via e.response.json() for clear diagnostics
+
+Fintoc docs: POST /v1/link_intents
 """
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
@@ -20,29 +31,55 @@ class handler(BaseHTTPRequestHandler):
         except PermissionError as e:
             self._json({"error": str(e)}, 401); return
 
+        # Optional body: { "holder_type": "individual" | "business" }
+        length = int(self.headers.get("Content-Length", 0))
+        body   = {}
+        if length:
+            try:
+                body = json.loads(self.rfile.read(length))
+            except json.JSONDecodeError:
+                self._json({"error": "Invalid JSON body"}, 400); return
+
+        holder_type = body.get("holder_type", "individual")
+        if holder_type not in ("individual", "business"):
+            self._json({"error": "holder_type must be 'individual' or 'business'"}, 400); return
+
+        # ── Build Fintoc payload ──────────────────────────────────────────────
+        # IMPORTANT: internal identifiers MUST live inside `metadata`.
+        # Placing them in `username` breaks the Widget auth flow.
+        payload = {
+            "product":     "movements",
+            "country":     "cl",
+            "holder_type": holder_type,
+            "metadata": {
+                "internal_user_id": user_id,
+            },
+        }
+
         try:
             r = requests.post(
                 f"{FINTOC_BASE}/link_intents",
-                headers={
-                    "Authorization": FINTOC_SECRET,
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "product":  "movements",
-                    "country":  "cl",
-                    "username": user_id,
-                },
+                headers={"Authorization": FINTOC_SECRET},
+                json=payload,
                 timeout=10,
             )
             r.raise_for_status()
             data = r.json()
+        except requests.exceptions.HTTPError as e:
+            # Extract the actual Fintoc error body for clear diagnostics
+            try:
+                fintoc_error = e.response.json()
+            except Exception:
+                fintoc_error = e.response.text
+            self._json({"error": "Fintoc link_intent creation failed", "detail": fintoc_error}, 502); return
         except Exception as e:
-            self._json({"error": f"Fintoc error: {e}"}, 502); return
+            self._json({"error": f"Request failed: {e}"}, 502); return
 
-        self._json({
-            "ok":          True,
-            "widget_token": data.get("widget_token"),
-        })
+        widget_token = data.get("widget_token")
+        if not widget_token:
+            self._json({"error": "Fintoc did not return a widget_token", "detail": data}, 502); return
+
+        self._json({"widget_token": widget_token})
 
     def _json(self, data, status=200):
         body = json.dumps(data).encode()

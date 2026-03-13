@@ -40,8 +40,8 @@ class handler(BaseHTTPRequestHandler):
 
         if mov_type and mov_type != "all":
             if mov_type == "other":
-                # Supabase doesn't have NOT IN easily, filter client-side on small sets
-                pass
+                # Exclude the known explicit types server-side so pagination is accurate
+                query = query.not_.in_("type", ["transfer", "charge", "deposit"])
             else:
                 query = query.eq("type", mov_type)
 
@@ -51,16 +51,16 @@ class handler(BaseHTTPRequestHandler):
         res   = query.execute()
         total = res.count or 0
 
-        # Parse JSON fields
+        # sender_data / recipient_data are jsonb — supabase returns them as dicts.
+        # No manual json.loads() needed (that was only required to undo double-encoding).
         movements = []
         for m in (res.data or []):
-            m["sender_data"]    = json.loads(m["sender_data"])    if m.get("sender_data")    else None
-            m["recipient_data"] = json.loads(m["recipient_data"]) if m.get("recipient_data") else None
-            if mov_type == "other" and m.get("type") in ("transfer", "charge", "deposit"):
-                continue
             movements.append(m)
 
-        # Stats
+        # Stats — fetches all amounts for this user to compute totals.
+        # TODO: replace with a Supabase RPC aggregate function (sum) for large datasets
+        #       to avoid pulling every row. Example:
+        #       sb.rpc("get_movement_stats", {"p_user_id": user_id}).execute()
         stats_res = sb.table("movements").select("amount").eq("user_id", user_id).execute()
         amounts   = [r["amount"] for r in (stats_res.data or [])]
         total_in  = sum(a for a in amounts if a > 0)

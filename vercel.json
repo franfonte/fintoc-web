@@ -16,7 +16,10 @@
     { "src": "/api/connect",     "dest": "/api/connect.py" },
     { "src": "/api/sync",        "dest": "/api/sync.py" },
     { "src": "/api/movements",   "dest": "/api/movements.py" },
-    { "src": "/api/link_intent", "dest": "/api/link_intent.py" },
+    { "src": "/api/link_intent",     "dest": "/api/link_intent.py" },
+    { "src": "/api/exchange_token",  "dest": "/api/exchange_token.py" },
+    { "src": "/api/refresh_data",    "dest": "/api/refresh_data.py" },
+    { "src": "/api/fintoc_webhook",  "dest": "/api/fintoc_webhook.py" },
     { "src": "/",              "dest": "/public/index.html" },
     { "src": "/(.*)",          "dest": "/public/$1" }
   ]

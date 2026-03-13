@@ -113,9 +113,12 @@ class handler(BaseHTTPRequestHandler):
                         "reference_id":     m.get("reference_id"),
                         "comment":          m.get("comment"),
                         "account_name":     acc.get("name"),
-                        "sender_data":      json.dumps(m.get("sender_account")),
-                        "recipient_data":   json.dumps(m.get("recipient_account")),
-                        "raw":              json.dumps(m),
+                        # Pass dicts directly — supabase handles jsonb serialization.
+                        # Do NOT json.dumps() here: that produces a JSON string inside
+                        # a jsonb column (double-encoded), breaking reads.
+                        "sender_data":      m.get("sender_account"),
+                        "recipient_data":   m.get("recipient_account"),
+                        "raw":              m,
                     })
                     existing_ids.add(m["id"])
 
