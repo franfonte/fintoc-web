@@ -470,17 +470,6 @@ html, body {
   padding: 10px 2px 4px;
 }
 
-.pending-wrap {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 11px;
-  color: var(--muted2);
-  border: 1px solid var(--border);
-  border-radius: 11px;
-  padding: 9px 10px;
-}
-
 /* Search */
 .search-wrap {
   position: relative;
@@ -744,6 +733,10 @@ html, body {
     <div class="header-row">
       <span class="header-logo">Movimientos</span>
       <div class="header-actions">
+        <button class="refresh-btn" onclick="openWidget()" title="Conectar otro banco">
+          <span class="spin-icon">＋</span>
+          <span>Conectar banco</span>
+        </button>
         <button class="refresh-btn" id="refresh-btn" onclick="syncData()">
           <span class="spin-icon">↻</span>
           <span id="refresh-label">Actualizar</span>
@@ -804,6 +797,7 @@ html, body {
       <button class="filter-btn" data-f="charge">Cargos</button>
       <button class="filter-btn" data-f="deposit">Depósitos</button>
       <button class="filter-btn" data-f="other">Otros</button>
+      <button class="filter-btn" id="pending-btn">Solo pendientes</button>
     </div>
 
     <div class="smart-filters">
@@ -819,11 +813,6 @@ html, body {
       <select class="smart-select" id="bank-filter">
         <option value="all">Todos los bancos</option>
       </select>
-
-      <label class="pending-wrap">
-        <input id="pending-only" type="checkbox">
-        Solo pendientes
-      </label>
 
       <div class="smart-row" id="month-row" style="display:none;grid-template-columns:1fr">
         <input class="smart-input" id="month-picker" type="month">
@@ -1145,20 +1134,28 @@ async function openWidget() {
 
 // ─── List rendering ──────────────────────────
 function setupFilters() {
-  document.querySelectorAll('.filter-btn').forEach(btn => {
+  document.querySelectorAll('.filter-btn:not(#pending-btn)').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.filter-btn:not(#pending-btn)').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       activeFilter = btn.dataset.f;
       renderList();
     });
   });
+
+  const pendingBtn = document.getElementById('pending-btn');
+  if (pendingBtn) {
+    pendingBtn.addEventListener('click', () => {
+      pendingOnly = !pendingOnly;
+      pendingBtn.classList.toggle('active', pendingOnly);
+      renderList();
+    });
+  }
 }
 
 function setupAdvancedFilters() {
   const presetEl = document.getElementById('date-preset');
   const bankEl = document.getElementById('bank-filter');
-  const pendingEl = document.getElementById('pending-only');
   const monthEl = document.getElementById('month-picker');
   const fromEl = document.getElementById('date-from');
   const toEl = document.getElementById('date-to');
@@ -1175,11 +1172,6 @@ function setupAdvancedFilters() {
 
   bankEl.addEventListener('change', e => {
     bankFilter = e.target.value;
-    renderList();
-  });
-
-  pendingEl.addEventListener('change', e => {
-    pendingOnly = e.target.checked;
     renderList();
   });
 
