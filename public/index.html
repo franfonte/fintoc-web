@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#080a0f">
 <title>Fintoc Finance</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Syne+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -730,7 +730,7 @@ html, body {
 
 <script>
 // ─── State ──────────────────────────────────
-let supabase, config;
+let sbClient, config;
 let session  = null;
 let movements = [];
 let newIds   = new Set();
@@ -745,13 +745,13 @@ async function boot() {
     const res = await fetch('/api/config');
     config = await res.json();
 
-    supabase = window.supabase.createClient(
+    sbClient = window.supabase.createClient(
       config.supabase_url,
       config.supabase_anon_key,
     );
 
     // Check existing session
-    const { data: { session: s } } = await supabase.auth.getSession();
+    const { data: { session: s } } = await sbClient.auth.getSession();
     if (s) {
       session = s;
       await enterApp();
@@ -792,9 +792,9 @@ async function submitAuth() {
   try {
     let res;
     if (authMode === 'login') {
-      res = await supabase.auth.signInWithPassword({ email, password });
+      res = await sbClient.auth.signInWithPassword({ email, password });
     } else {
-      res = await supabase.auth.signUp({ email, password });
+      res = await sbClient.auth.signUp({ email, password });
     }
 
     if (res.error) throw res.error;
@@ -822,7 +822,7 @@ function showAuthErr(msg) {
 }
 
 async function signOut() {
-  await supabase.auth.signOut();
+  await sbClient.auth.signOut();
   session = null;
   movements = [];
   showScreen('auth');
