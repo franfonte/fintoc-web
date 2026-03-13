@@ -3,7 +3,8 @@
   "builds": [
     {
       "src": "api/**/*.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": { "maxDuration": 30 }
     },
     {
       "src": "public/**",
@@ -13,10 +14,5 @@
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1.py" },
     { "src": "/(.*)",     "dest": "/public/$1" }
-  ],
-  "functions": {
-    "api/**/*.py": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }
