@@ -933,8 +933,10 @@ async function checkBankConnected() {
 
 // ─── Fintoc Widget ───────────────────────────
 async function openWidget() {
+  const token = session.access_token;
+
+  // 1. Load Fintoc script if not already loaded
   if (!window.Fintoc) {
-    // Load Fintoc widget script
     await new Promise((res, rej) => {
       const s = document.createElement('script');
       s.src = 'https://js.fintoc.com/v1/';
@@ -943,14 +945,25 @@ async function openWidget() {
     });
   }
 
-  const token = session.access_token;
+  // 2. Create a Link Intent on our backend to get the widget_token
+  let widgetToken;
+  try {
+    toast('Preparando conexión…');
+    const r = await fetch('/api/link_intent', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    });
+    const data = await r.json();
+    if (!data.ok) throw new Error(data.error || 'No se pudo crear el Link Intent');
+    widgetToken = data.widget_token;
+  } catch(e) {
+    toast(`Error: ${e.message}`, 'red'); return;
+  }
 
-  // Create a link intent via Fintoc API (we need to add this endpoint)
-  // For now, we open the widget directly with the public key
+  // 3. Open the widget with the widget_token
   const widget = window.Fintoc.create({
-    publicKey: config.fintoc_public_key,
-    product:   'movements',
-    country:   'cl',
+    publicKey:   config.fintoc_public_key,
+    widgetToken: widgetToken,
     onSuccess: async (linkIntent) => {
       const exchangeToken = linkIntent.exchangeToken;
       toast('Conectando banco…');

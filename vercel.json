@@ -12,10 +12,11 @@
     }
   ],
   "routes": [
-    { "src": "/api/config",    "dest": "/api/config.py" },
-    { "src": "/api/connect",   "dest": "/api/connect.py" },
-    { "src": "/api/sync",      "dest": "/api/sync.py" },
-    { "src": "/api/movements", "dest": "/api/movements.py" },
+    { "src": "/api/config",      "dest": "/api/config.py" },
+    { "src": "/api/connect",     "dest": "/api/connect.py" },
+    { "src": "/api/sync",        "dest": "/api/sync.py" },
+    { "src": "/api/movements",   "dest": "/api/movements.py" },
+    { "src": "/api/link_intent", "dest": "/api/link_intent.py" },
     { "src": "/",              "dest": "/public/index.html" },
     { "src": "/(.*)",          "dest": "/public/$1" }
   ]
