@@ -385,6 +385,102 @@ html, body {
 .filter-btn:hover { border-color: var(--border2); color: var(--text); }
 .filter-btn.active { background: var(--text); border-color: var(--text); color: var(--bg); }
 
+.smart-filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.smart-input,
+.smart-select {
+  width: 100%;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 9px 10px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  outline: none;
+}
+
+.smart-input:focus,
+.smart-select:focus { border-color: var(--border2); }
+
+.smart-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.trend-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.trend-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.trend-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted2);
+}
+
+.trend-net {
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.trend-toggle {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted2);
+  border-radius: 999px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.trend-body { transition: opacity 0.18s ease; }
+.trend-card.collapsed .trend-body { display: none; }
+
+.trend-svg {
+  width: 100%;
+  height: 90px;
+  display: block;
+}
+
+.trend-empty {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 10px 2px 4px;
+}
+
+.pending-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: var(--muted2);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 9px 10px;
+}
+
 /* Search */
 .search-wrap {
   position: relative;
@@ -686,6 +782,21 @@ html, body {
       <span class="connect-arrow">→</span>
     </div>
 
+    <div class="trend-card" id="trend-card">
+      <div class="trend-head">
+        <span class="trend-title">Flujo de caja</span>
+        <span class="trend-net" id="trend-net">—</span>
+      </div>
+      <div class="trend-head" style="margin-bottom:6px">
+        <span style="font-size:11px;color:var(--muted)" id="trend-period">Periodo actual</span>
+        <button class="trend-toggle" id="trend-toggle" onclick="toggleTrendCard()">Minimizar</button>
+      </div>
+      <div class="trend-body" id="trend-body">
+        <svg class="trend-svg" id="trend-svg" viewBox="0 0 320 90" preserveAspectRatio="none"></svg>
+        <div class="trend-empty" id="trend-empty" style="display:none">No hay suficientes datos para graficar en este periodo.</div>
+      </div>
+    </div>
+
     <!-- Filters -->
     <div class="filters">
       <button class="filter-btn active" data-f="all">Todos</button>
@@ -693,6 +804,35 @@ html, body {
       <button class="filter-btn" data-f="charge">Cargos</button>
       <button class="filter-btn" data-f="deposit">Depósitos</button>
       <button class="filter-btn" data-f="other">Otros</button>
+    </div>
+
+    <div class="smart-filters">
+      <select class="smart-select" id="date-preset">
+        <option value="all">Todo el historial</option>
+        <option value="last30">Últimos 30 días</option>
+        <option value="last90">Últimos 90 días</option>
+        <option value="thisMonth">Mes actual</option>
+        <option value="lastMonth">Mes pasado</option>
+        <option value="month">Mes específico</option>
+        <option value="custom">Rango personalizado</option>
+      </select>
+      <select class="smart-select" id="bank-filter">
+        <option value="all">Todos los bancos</option>
+      </select>
+
+      <label class="pending-wrap">
+        <input id="pending-only" type="checkbox">
+        Solo pendientes
+      </label>
+
+      <div class="smart-row" id="month-row" style="display:none;grid-template-columns:1fr">
+        <input class="smart-input" id="month-picker" type="month">
+      </div>
+
+      <div class="smart-row" id="custom-date-row" style="display:none">
+        <input class="smart-input" id="date-from" type="date">
+        <input class="smart-input" id="date-to" type="date">
+      </div>
     </div>
 
     <!-- Search -->
@@ -737,6 +877,13 @@ let newIds   = new Set();
 let activeFilter = 'all';
 let searchQuery  = '';
 let hasBank = false;
+let bankFilter = 'all';
+let datePreset = 'all';
+let pendingOnly = false;
+let selectedMonth = '';
+let customDateFrom = '';
+let customDateTo = '';
+let trendCollapsed = false;
 
 // ─── Boot ────────────────────────────────────
 async function boot() {
@@ -832,6 +979,7 @@ async function signOut() {
 async function enterApp() {
   showScreen('app');
   setupFilters();
+  setupAdvancedFilters();
   document.getElementById('search').addEventListener('input', e => {
     searchQuery = e.target.value;
     renderList();
@@ -848,6 +996,7 @@ async function loadMovements() {
     });
     const data = await res.json();
     movements = data.movements || [];
+    populateBankFilter(data.available_banks || []);
     updateStats(data.stats || {});
     updateSyncBar(null, false);
     renderList();
@@ -1006,24 +1155,210 @@ function setupFilters() {
   });
 }
 
-function renderList() {
-  let filtered = movements;
+function setupAdvancedFilters() {
+  const presetEl = document.getElementById('date-preset');
+  const bankEl = document.getElementById('bank-filter');
+  const pendingEl = document.getElementById('pending-only');
+  const monthEl = document.getElementById('month-picker');
+  const fromEl = document.getElementById('date-from');
+  const toEl = document.getElementById('date-to');
+
+  selectedMonth = new Date().toISOString().slice(0, 7);
+  monthEl.value = selectedMonth;
+
+  presetEl.addEventListener('change', e => {
+    datePreset = e.target.value;
+    document.getElementById('month-row').style.display = datePreset === 'month' ? 'grid' : 'none';
+    document.getElementById('custom-date-row').style.display = datePreset === 'custom' ? 'grid' : 'none';
+    renderList();
+  });
+
+  bankEl.addEventListener('change', e => {
+    bankFilter = e.target.value;
+    renderList();
+  });
+
+  pendingEl.addEventListener('change', e => {
+    pendingOnly = e.target.checked;
+    renderList();
+  });
+
+  monthEl.addEventListener('change', e => {
+    selectedMonth = e.target.value;
+    renderList();
+  });
+
+  fromEl.addEventListener('change', e => {
+    customDateFrom = e.target.value;
+    renderList();
+  });
+
+  toEl.addEventListener('change', e => {
+    customDateTo = e.target.value;
+    renderList();
+  });
+}
+
+function populateBankFilter(banks) {
+  const select = document.getElementById('bank-filter');
+  if (!select) return;
+  const current = select.value || 'all';
+  select.innerHTML = '<option value="all">Todos los bancos</option>';
+  banks.forEach(bank => {
+    const opt = document.createElement('option');
+    opt.value = bank;
+    opt.textContent = bank;
+    select.appendChild(opt);
+  });
+  if ([...select.options].some(o => o.value === current)) {
+    select.value = current;
+    bankFilter = current;
+  } else {
+    bankFilter = 'all';
+  }
+}
+
+function toISODate(m) {
+  return (m.post_date || m.transaction_date || '').slice(0, 10);
+}
+
+function getDateRangeFromPreset() {
+  const now = new Date();
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  if (datePreset === 'all') return { from: null, to: null, label: 'Todo el historial' };
+  if (datePreset === 'last30') {
+    const from = new Date(end); from.setDate(from.getDate() - 29);
+    return { from: from.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10), label: 'Últimos 30 días' };
+  }
+  if (datePreset === 'last90') {
+    const from = new Date(end); from.setDate(from.getDate() - 89);
+    return { from: from.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10), label: 'Últimos 90 días' };
+  }
+  if (datePreset === 'thisMonth') {
+    const from = new Date(end.getFullYear(), end.getMonth(), 1);
+    return { from: from.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10), label: 'Mes actual' };
+  }
+  if (datePreset === 'lastMonth') {
+    const from = new Date(end.getFullYear(), end.getMonth() - 1, 1);
+    const to = new Date(end.getFullYear(), end.getMonth(), 0);
+    return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10), label: 'Mes pasado' };
+  }
+  if (datePreset === 'month' && selectedMonth) {
+    const [y, m] = selectedMonth.split('-').map(Number);
+    const from = new Date(y, m - 1, 1);
+    const to = new Date(y, m, 0);
+    return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10), label: selectedMonth };
+  }
+  if (datePreset === 'custom') {
+    return { from: customDateFrom || null, to: customDateTo || null, label: 'Rango personalizado' };
+  }
+  return { from: null, to: null, label: 'Todo el historial' };
+}
+
+function getMovementSearchBlob(m) {
+  const sender = m.sender_data?.holder_name || m.sender_data?.institution?.name || '';
+  const recipient = m.recipient_data?.holder_name || m.recipient_data?.institution?.name || '';
+  return [m.description, m.comment, m.account_name, m.institution, sender, recipient].filter(Boolean).join(' ').toLowerCase();
+}
+
+function getFilteredMovements() {
+  let filtered = [...movements];
 
   if (activeFilter !== 'all') {
     filtered = filtered.filter(m => {
-      if (activeFilter === 'other') return !['transfer','charge','deposit'].includes(m.type);
+      if (activeFilter === 'other') return !['transfer', 'charge', 'deposit'].includes(m.type);
       return m.type === activeFilter;
     });
   }
 
+  if (bankFilter !== 'all') {
+    filtered = filtered.filter(m => (m.institution || 'Banco desconocido') === bankFilter);
+  }
+
+  const range = getDateRangeFromPreset();
+  if (range.from) filtered = filtered.filter(m => toISODate(m) >= range.from);
+  if (range.to) filtered = filtered.filter(m => toISODate(m) <= range.to);
+
+  if (pendingOnly) {
+    filtered = filtered.filter(m => !!m.pending);
+  }
+
   if (searchQuery.trim()) {
     const q = searchQuery.toLowerCase();
-    filtered = filtered.filter(m =>
-      (m.description  || '').toLowerCase().includes(q) ||
-      (m.comment      || '').toLowerCase().includes(q) ||
-      (m.account_name || '').toLowerCase().includes(q)
-    );
+    filtered = filtered.filter(m => getMovementSearchBlob(m).includes(q));
   }
+
+  return filtered;
+}
+
+function toggleTrendCard() {
+  trendCollapsed = !trendCollapsed;
+  const card = document.getElementById('trend-card');
+  const btn = document.getElementById('trend-toggle');
+  card.classList.toggle('collapsed', trendCollapsed);
+  btn.textContent = trendCollapsed ? 'Expandir' : 'Minimizar';
+}
+
+function renderTrend(filtered) {
+  const svg = document.getElementById('trend-svg');
+  const empty = document.getElementById('trend-empty');
+  const netEl = document.getElementById('trend-net');
+  const period = getDateRangeFromPreset();
+  document.getElementById('trend-period').textContent = period.label;
+
+  const series = new Map();
+  filtered.forEach(m => {
+    const d = toISODate(m);
+    if (!d) return;
+    series.set(d, (series.get(d) || 0) + (m.amount || 0));
+  });
+
+  const dates = [...series.keys()].sort((a, b) => a.localeCompare(b));
+  const values = dates.map(d => series.get(d));
+  const net = values.reduce((acc, n) => acc + n, 0);
+  netEl.textContent = `${net >= 0 ? '+' : '-'}${clp(net)}`;
+  netEl.style.color = net >= 0 ? 'var(--green)' : 'var(--red)';
+
+  if (values.length < 2) {
+    svg.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+
+  empty.style.display = 'none';
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = Math.max(max - min, 1);
+  const width = 320;
+  const height = 90;
+  const step = width / (values.length - 1);
+  const y = v => height - ((v - min) / span) * (height - 8) - 4;
+
+  const points = values.map((v, i) => `${(i * step).toFixed(2)},${y(v).toFixed(2)}`).join(' ');
+  svg.innerHTML = `
+    <line x1="0" y1="${y(0)}" x2="320" y2="${y(0)}" stroke="rgba(255,255,255,0.14)" stroke-dasharray="3 4" />
+    <polyline points="${points}" fill="none" stroke="rgba(0,229,160,0.95)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />
+  `;
+}
+
+function updateVisibleStats(filtered) {
+  const totalIn = filtered.filter(m => m.amount > 0).reduce((acc, m) => acc + m.amount, 0);
+  const totalOutAbs = Math.abs(filtered.filter(m => m.amount < 0).reduce((acc, m) => acc + m.amount, 0));
+  const inc = filtered.filter(m => m.amount > 0).length;
+  const exp = filtered.filter(m => m.amount < 0).length;
+
+  document.getElementById('stat-in').textContent = clp(totalIn);
+  document.getElementById('stat-out').textContent = clp(totalOutAbs);
+  document.getElementById('stat-in-count').textContent = `${inc} movimientos`;
+  document.getElementById('stat-out-count').textContent = `${exp} movimientos`;
+}
+
+function renderList() {
+  const filtered = getFilteredMovements();
+  updateVisibleStats(filtered);
+  renderTrend(filtered);
 
   document.getElementById('list-count').textContent = `${filtered.length} resultado${filtered.length !== 1 ? 's' : ''}`;
 
@@ -1061,6 +1396,7 @@ function renderList() {
             <div class="mov-desc">${m.description || 'Movimiento'}</div>
             <div class="mov-tags">
               <span class="mov-tag">${m.type || 'otro'}</span>
+              ${m.institution ? `<span class="mov-tag">${m.institution}</span>` : ''}
               ${m.pending ? '<span class="mov-tag pend">Pendiente</span>' : ''}
               ${isNew ? '<span class="mov-tag new">Nuevo</span>' : ''}
             </div>
@@ -1093,6 +1429,7 @@ function openSheet(idx) {
   rows.push(['Tipo',   m.type || '—',   false]);
   rows.push(['Estado', m.pending ? '⏳ Pendiente' : '✅ Confirmado', false]);
   if (m.currency)      rows.push(['Moneda',    m.currency,     false]);
+  if (m.institution)   rows.push(['Banco',      m.institution,  false]);
   if (m.reference_id)  rows.push(['Referencia', m.reference_id, true]);
   if (m.comment)       rows.push(['Comentario', m.comment,      false]);
   if (m.account_name)  rows.push(['Cuenta',     m.account_name, false]);
