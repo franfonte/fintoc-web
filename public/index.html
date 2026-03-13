@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#080a0f">
+<title>Fintoc Finance</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Syne+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #080a0f;
+  --s1:      #0f1117;
+  --s2:      #161820;
+  --s3:      #1c1e28;
+  --border:  rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --text:    #eeeef4;
+  --muted:   #62657e;
+  --muted2:  #9496ae;
+  --green:   #00e5a0;
+  --red:     #ff4d6d;
+  --yellow:  #ffd166;
+  --r:       18px;
+}
+
+html, body {
+  min-height: 100dvh;
+  background: var(--bg);
+  font-family: 'Inter', sans-serif;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Screens ── */
+.screen {
+  display: none;
+  min-height: 100dvh;
+}
+.screen.active { display: flex; }
+
+/* ── Auth screen ── */
+#screen-auth {
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  flex-direction: column;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--s1);
+  border: 1px solid var(--border2);
+  border-radius: 28px;
+  padding: 36px 32px;
+}
+
+.auth-logo {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+  color: var(--green);
+}
+
+.auth-tagline {
+  font-size: 13px;
+  color: var(--muted2);
+  margin-bottom: 32px;
+  line-height: 1.5;
+}
+
+.auth-tabs {
+  display: flex;
+  background: var(--s2);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 28px;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 9px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--muted2);
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.auth-tab.active {
+  background: var(--s3);
+  color: var(--text);
+}
+
+.field {
+  margin-bottom: 16px;
+}
+
+.field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Syne', sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.field input {
+  width: 100%;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 13px 16px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.field input:focus { border-color: var(--green); }
+.field input::placeholder { color: var(--muted); }
+
+.auth-btn {
+  width: 100%;
+  padding: 15px;
+  background: var(--green);
+  color: var(--bg);
+  border: none;
+  border-radius: 14px;
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  margin-top: 8px;
+}
+
+.auth-btn:hover   { opacity: 0.88; }
+.auth-btn:active  { transform: scale(0.98); }
+.auth-btn:disabled { opacity: 0.4; pointer-events: none; }
+
+.auth-error {
+  background: rgba(255,77,109,0.1);
+  border: 1px solid rgba(255,77,109,0.3);
+  color: var(--red);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 12px;
+  margin-top: 14px;
+  display: none;
+}
+
+/* ── Loading screen ── */
+#screen-loading {
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border2);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── App screen ── */
+#screen-app {
+  flex-direction: column;
+  max-width: 430px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.safe-top { height: env(safe-area-inset-top, 12px); flex-shrink: 0; }
+
+/* Header */
+.app-header {
+  padding: 14px 22px 0;
+  flex-shrink: 0;
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.header-logo {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted2);
+}
+
+.header-actions { display: flex; gap: 8px; align-items: center; }
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  color: var(--muted2);
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.icon-btn:hover { background: var(--s3); color: var(--text); }
+
+.refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--s2);
+  border: 1px solid var(--border2);
+  border-radius: 50px;
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.refresh-btn:hover { border-color: var(--green); color: var(--green); }
+.refresh-btn.loading { pointer-events: none; opacity: 0.5; }
+
+.spin-icon { display: inline-block; }
+.refresh-btn.loading .spin-icon { animation: spin 0.7s linear infinite; }
+
+/* Sync bar */
+.sync-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  height: 18px;
+}
+
+.sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+.sync-dot.live  { background: var(--green); }
+.sync-dot.pulse { animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.3;transform:scale(0.7)} }
+
+.sync-text { font-family: 'Syne Mono', monospace; font-size: 10px; color: var(--muted); }
+
+.new-badge {
+  padding: 2px 8px;
+  background: rgba(0,229,160,0.1);
+  color: var(--green);
+  border-radius: 20px;
+  font-family: 'Syne', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  display: none;
+  animation: pop 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes pop { from{transform:scale(0.4);opacity:0} to{transform:scale(1);opacity:1} }
+
+/* Stats */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.stat-card {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+
+.stat-card.inc::before { background: var(--green); }
+.stat-card.exp::before { background: var(--red); }
+
+.stat-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-family: 'Syne', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.stat-card.inc .stat-value { color: var(--green); }
+.stat-card.exp .stat-value { color: var(--red); }
+.stat-sub { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+/* Connect bank banner */
+.connect-banner {
+  background: linear-gradient(135deg, rgba(0,229,160,0.08), rgba(0,229,160,0.03));
+  border: 1px solid rgba(0,229,160,0.2);
+  border-radius: var(--r);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.connect-banner:hover { border-color: rgba(0,229,160,0.4); }
+.connect-banner-text { font-size: 13px; font-weight: 500; }
+.connect-banner-sub  { font-size: 11px; color: var(--muted2); margin-top: 3px; }
+.connect-arrow { color: var(--green); font-size: 18px; }
+
+/* Filters */
+.filters {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: 14px;
+}
+.filters::-webkit-scrollbar { display: none; }
+
+.filter-btn {
+  padding: 6px 13px;
+  border-radius: 50px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted2);
+  font-family: 'Syne', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.filter-btn:hover { border-color: var(--border2); color: var(--text); }
+.filter-btn.active { background: var(--text); border-color: var(--text); color: var(--bg); }
+
+/* Search */
+.search-wrap {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.search-input {
+  width: 100%;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  padding: 11px 16px 11px 38px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.search-input::placeholder { color: var(--muted); }
+.search-input:focus { border-color: var(--border2); }
+
+.search-ico {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+/* List header */
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.list-title { font-family:'Syne',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); }
+.list-count { font-family:'Syne Mono',monospace; font-size:10px; color:var(--muted); }
+
+/* Movements scroll */
+.movements-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: calc(env(safe-area-inset-bottom,0px) + 32px);
+}
+.movements-scroll::-webkit-scrollbar { display: none; }
+
+/* Date divider */
+.date-div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px 8px;
+}
+.date-div-label { font-family:'Syne',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); white-space:nowrap; }
+.date-div-line  { flex:1; height:1px; background:var(--border); }
+
+/* Movement item */
+.mov-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 22px;
+  cursor: pointer;
+  transition: background 0.12s;
+  position: relative;
+  animation: fadeIn 0.2s ease both;
+}
+
+.mov-item.is-new::before {
+  content:'';
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 55%;
+  background: var(--green);
+  border-radius: 2px;
+}
+
+@keyframes fadeIn { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:translateX(0)} }
+.mov-item:hover  { background: var(--s1); }
+.mov-item:active { background: var(--s2); }
+
+.mov-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.mov-body { flex: 1; min-width: 0; }
+.mov-desc {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 3px;
+}
+.mov-tags { display: flex; gap: 4px; align-items: center; }
+.mov-tag  { font-family:'Syne',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; padding:2px 6px; border-radius:5px; background:var(--s2); color:var(--muted2); }
+.mov-tag.pend { background:rgba(255,209,102,0.1); color:var(--yellow); }
+.mov-tag.new  { background:rgba(0,229,160,0.08); color:var(--green); }
+
+.mov-right { text-align:right; flex-shrink:0; }
+.mov-amount { font-family:'Syne',sans-serif; font-size:14px; font-weight:700; letter-spacing:-0.02em; }
+.mov-amount.inc { color:var(--green); }
+.mov-amount.exp { color:var(--red); }
+.mov-acct { font-family:'Syne Mono',monospace; font-size:9px; color:var(--muted); margin-top:2px; }
+
+/* Empty */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  text-align: center;
+}
+.empty-icon  { font-size:36px; margin-bottom:14px; }
+.empty-title { font-family:'Syne',sans-serif; font-size:15px; font-weight:700; margin-bottom:8px; }
+.empty-msg   { font-size:13px; color:var(--muted2); line-height:1.5; max-width:260px; }
+
+/* Bottom sheet */
+.sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 300;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s;
+}
+.sheet-overlay.open { opacity:1; pointer-events:all; }
+
+.sheet {
+  background: var(--s2);
+  border: 1px solid var(--border2);
+  border-bottom: none;
+  border-radius: 26px 26px 0 0;
+  padding: 10px 24px calc(env(safe-area-inset-bottom,16px) + 28px);
+  width: 100%;
+  max-width: 430px;
+  transform: translateY(100%);
+  transition: transform 0.28s cubic-bezier(0.32,0.72,0,1);
+  max-height: 85dvh;
+  overflow-y: auto;
+}
+.sheet-overlay.open .sheet { transform: translateY(0); }
+
+.sheet-handle { width:36px; height:4px; background:var(--border2); border-radius:2px; margin: 0 auto 22px; }
+
+.sheet-amount {
+  font-family: 'Syne', sans-serif;
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-align: center;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.sheet-amount.inc { color:var(--green); }
+.sheet-amount.exp { color:var(--red); }
+.sheet-desc { text-align:center; font-size:13px; color:var(--muted2); margin-bottom:26px; line-height:1.4; }
+
+.sheet-rows { display:flex; flex-direction:column; }
+.sheet-row  { display:flex; justify-content:space-between; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--border); gap:20px; }
+.sheet-row:last-child { border-bottom:none; }
+.sheet-key { font-family:'Syne',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); flex-shrink:0; padding-top:1px; }
+.sheet-val { font-size:12px; font-weight:500; text-align:right; word-break:break-word; }
+.sheet-val.mono { font-family:'Syne Mono',monospace; }
+
+.sheet-close {
+  width:100%; margin-top:22px; padding:14px;
+  background:var(--s3); border:1px solid var(--border); border-radius:14px;
+  color:var(--muted2); font-family:'Syne',sans-serif; font-size:12px; font-weight:700;
+  letter-spacing:0.06em; cursor:pointer; transition:all 0.15s;
+}
+.sheet-close:hover { background:var(--border2); color:var(--text); }
+
+/* Toast */
+.toast {
+  position: fixed;
+  top: calc(env(safe-area-inset-top,0px) + 14px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-70px);
+  background: var(--s3);
+  border: 1px solid var(--border2);
+  border-radius: 50px;
+  padding: 9px 18px;
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  z-index: 400;
+  transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.green { color:var(--green); border-color:rgba(0,229,160,0.3); }
+.toast.red   { color:var(--red);   border-color:rgba(255,77,109,0.3); }
+</style>
+</head>
+<body>
+
+<!-- ── Loading ── -->
+<div class="screen active" id="screen-loading">
+  <div class="spinner"></div>
+  <span style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Cargando…</span>
+</div>
+
+<!-- ── Auth ── -->
+<div class="screen" id="screen-auth">
+  <div class="auth-card">
+    <div class="auth-logo">💸 Fintoc</div>
+    <div class="auth-tagline">Visualiza todos tus movimientos bancarios en un solo lugar.</div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="setAuthTab('login')">Iniciar sesión</button>
+      <button class="auth-tab" onclick="setAuthTab('signup')">Crear cuenta</button>
+    </div>
+
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="auth-email" placeholder="tu@email.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+
+    <button class="auth-btn" id="auth-submit-btn" onclick="submitAuth()">Iniciar sesión</button>
+    <div class="auth-error" id="auth-error"></div>
+  </div>
+</div>
+
+<!-- ── App ── -->
+<div class="screen" id="screen-app">
+  <div class="safe-top"></div>
+
+  <div class="app-header">
+    <!-- Header row -->
+    <div class="header-row">
+      <span class="header-logo">Movimientos</span>
+      <div class="header-actions">
+        <button class="refresh-btn" id="refresh-btn" onclick="syncData()">
+          <span class="spin-icon">↻</span>
+          <span id="refresh-label">Actualizar</span>
+        </button>
+        <div class="icon-btn" onclick="signOut()" title="Cerrar sesión">⎋</div>
+      </div>
+    </div>
+
+    <!-- Sync bar -->
+    <div class="sync-bar">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span class="sync-text" id="sync-text">—</span>
+      <span class="new-badge" id="new-badge"></span>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card inc">
+        <div class="stat-label">Ingresos</div>
+        <div class="stat-value" id="stat-in">—</div>
+        <div class="stat-sub"  id="stat-in-count"></div>
+      </div>
+      <div class="stat-card exp">
+        <div class="stat-label">Egresos</div>
+        <div class="stat-value" id="stat-out">—</div>
+        <div class="stat-sub"  id="stat-out-count"></div>
+      </div>
+    </div>
+
+    <!-- Connect bank banner -->
+    <div class="connect-banner" id="connect-banner" onclick="openWidget()" style="display:none">
+      <div>
+        <div class="connect-banner-text">Conecta tu banco</div>
+        <div class="connect-banner-sub">Vincula tu cuenta bancaria para ver tus movimientos</div>
+      </div>
+      <span class="connect-arrow">→</span>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <button class="filter-btn active" data-f="all">Todos</button>
+      <button class="filter-btn" data-f="transfer">Transferencias</button>
+      <button class="filter-btn" data-f="charge">Cargos</button>
+      <button class="filter-btn" data-f="deposit">Depósitos</button>
+      <button class="filter-btn" data-f="other">Otros</button>
+    </div>
+
+    <!-- Search -->
+    <div class="search-wrap">
+      <span class="search-ico">⌕</span>
+      <input class="search-input" type="search" id="search" placeholder="Buscar…" autocomplete="off">
+    </div>
+
+    <!-- List header -->
+    <div class="list-header">
+      <span class="list-title">Historial</span>
+      <span class="list-count" id="list-count"></span>
+    </div>
+  </div>
+
+  <!-- Scrollable list -->
+  <div class="movements-scroll">
+    <div id="list-inner"></div>
+  </div>
+</div>
+
+<!-- Detail sheet -->
+<div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-amount" id="sheet-amount"></div>
+    <div class="sheet-desc"   id="sheet-desc"></div>
+    <div class="sheet-rows"   id="sheet-rows"></div>
+    <button class="sheet-close" onclick="closeSheet()">Cerrar</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── State ──────────────────────────────────
+let supabase, config;
+let session  = null;
+let movements = [];
+let newIds   = new Set();
+let activeFilter = 'all';
+let searchQuery  = '';
+let hasBank = false;
+
+// ─── Boot ────────────────────────────────────
+async function boot() {
+  try {
+    // Fetch config from our API
+    const res = await fetch('/api/config');
+    config = await res.json();
+
+    supabase = window.supabase.createClient(
+      config.supabase_url,
+      config.supabase_anon_key,
+    );
+
+    // Check existing session
+    const { data: { session: s } } = await supabase.auth.getSession();
+    if (s) {
+      session = s;
+      await enterApp();
+    } else {
+      showScreen('auth');
+    }
+  } catch(e) {
+    showScreen('auth');
+    console.error(e);
+  }
+}
+
+// ─── Auth ────────────────────────────────────
+let authMode = 'login';
+
+function setAuthTab(mode) {
+  authMode = mode;
+  document.querySelectorAll('.auth-tab').forEach((t, i) => {
+    t.classList.toggle('active', (i === 0 && mode === 'login') || (i === 1 && mode === 'signup'));
+  });
+  document.getElementById('auth-submit-btn').textContent =
+    mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta';
+  document.getElementById('auth-error').style.display = 'none';
+}
+
+async function submitAuth() {
+  const email    = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const btn      = document.getElementById('auth-submit-btn');
+  const errEl    = document.getElementById('auth-error');
+
+  if (!email || !password) { showAuthErr('Completa todos los campos'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Cargando…';
+  errEl.style.display = 'none';
+
+  try {
+    let res;
+    if (authMode === 'login') {
+      res = await supabase.auth.signInWithPassword({ email, password });
+    } else {
+      res = await supabase.auth.signUp({ email, password });
+    }
+
+    if (res.error) throw res.error;
+    session = res.data.session;
+
+    if (authMode === 'signup' && !session) {
+      showAuthErr('✓ Revisa tu email para confirmar tu cuenta.');
+      btn.disabled = false;
+      btn.textContent = 'Crear cuenta';
+      return;
+    }
+
+    await enterApp();
+  } catch(e) {
+    showAuthErr(e.message || 'Error de autenticación');
+    btn.disabled = false;
+    btn.textContent = authMode === 'login' ? 'Iniciar sesión' : 'Crear cuenta';
+  }
+}
+
+function showAuthErr(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+async function signOut() {
+  await supabase.auth.signOut();
+  session = null;
+  movements = [];
+  showScreen('auth');
+}
+
+// ─── App ─────────────────────────────────────
+async function enterApp() {
+  showScreen('app');
+  setupFilters();
+  document.getElementById('search').addEventListener('input', e => {
+    searchQuery = e.target.value;
+    renderList();
+  });
+  await loadMovements();
+  checkBankConnected();
+}
+
+async function loadMovements() {
+  try {
+    const token = session.access_token;
+    const res   = await fetch('/api/movements?per_page=300', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    movements = data.movements || [];
+    updateStats(data.stats || {});
+    updateSyncBar(null, false);
+    renderList();
+  } catch(e) {
+    toast('Error cargando movimientos', 'red');
+  }
+}
+
+async function syncData() {
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('loading');
+  document.getElementById('refresh-label').textContent = 'Sincronizando…';
+  setSyncState('syncing');
+  hideBadge();
+
+  try {
+    const token = session.access_token;
+    const res   = await fetch('/api/sync', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    });
+    const result = await res.json();
+    if (!result.ok && result.errors?.length) throw new Error(result.errors[0]);
+
+    const oldIds = new Set(movements.map(m => m.id));
+    await loadMovements();
+    newIds = new Set(movements.filter(m => !oldIds.has(m.id)).map(m => m.id));
+    renderList();
+
+    if (result.new > 0) {
+      showBadge(`+${result.new} nuevos`);
+      toast(`✓ ${result.new} movimiento${result.new > 1 ? 's' : ''} nuevo${result.new > 1 ? 's' : ''}`, 'green');
+    } else {
+      toast('✓ Todo al día', 'green');
+    }
+
+    setSyncState('live');
+  } catch(e) {
+    toast(`Error: ${e.message}`, 'red');
+    setSyncState('stale');
+  } finally {
+    btn.classList.remove('loading');
+    document.getElementById('refresh-label').textContent = 'Actualizar';
+  }
+}
+
+function setSyncState(state) {
+  const dot  = document.getElementById('sync-dot');
+  const text = document.getElementById('sync-text');
+  if (state === 'syncing') {
+    dot.className = 'sync-dot pulse';
+    text.textContent = 'Sincronizando…';
+  } else if (state === 'live') {
+    dot.className = 'sync-dot live';
+    text.textContent = 'Actualizado ahora';
+  } else {
+    dot.className = 'sync-dot';
+    text.textContent = movements.length ? `${movements.length} movimientos guardados` : 'Sin datos';
+  }
+}
+
+function updateSyncBar(lastSync, fresh) {
+  setSyncState(fresh ? 'live' : 'stale');
+}
+
+function updateStats(stats) {
+  document.getElementById('stat-in').textContent       = clp(stats.total_in  || 0);
+  document.getElementById('stat-out').textContent      = clp(stats.total_out || 0);
+  const inc = movements.filter(m => m.amount > 0).length;
+  const exp = movements.filter(m => m.amount < 0).length;
+  document.getElementById('stat-in-count').textContent  = `${inc} movimientos`;
+  document.getElementById('stat-out-count').textContent = `${exp} movimientos`;
+}
+
+async function checkBankConnected() {
+  try {
+    const token = session.access_token;
+    // We know if they have movements; if not, prompt to connect
+    hasBank = movements.length > 0;
+    document.getElementById('connect-banner').style.display = hasBank ? 'none' : 'flex';
+  } catch {}
+}
+
+// ─── Fintoc Widget ───────────────────────────
+async function openWidget() {
+  if (!window.Fintoc) {
+    // Load Fintoc widget script
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://js.fintoc.com/v1/';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+
+  const token = session.access_token;
+
+  // Create a link intent via Fintoc API (we need to add this endpoint)
+  // For now, we open the widget directly with the public key
+  const widget = window.Fintoc.create({
+    publicKey: config.fintoc_public_key,
+    product:   'movements',
+    country:   'cl',
+    onSuccess: async (linkIntent) => {
+      const exchangeToken = linkIntent.exchangeToken;
+      toast('Conectando banco…');
+      try {
+        const res = await fetch('/api/connect', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ exchange_token: exchangeToken }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        toast('✓ Banco conectado', 'green');
+        document.getElementById('connect-banner').style.display = 'none';
+        await syncData();
+      } catch(e) {
+        toast(`Error: ${e.message}`, 'red');
+      }
+    },
+    onExit: () => {},
+  });
+
+  widget.open();
+}
+
+// ─── List rendering ──────────────────────────
+function setupFilters() {
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilter = btn.dataset.f;
+      renderList();
+    });
+  });
+}
+
+function renderList() {
+  let filtered = movements;
+
+  if (activeFilter !== 'all') {
+    filtered = filtered.filter(m => {
+      if (activeFilter === 'other') return !['transfer','charge','deposit'].includes(m.type);
+      return m.type === activeFilter;
+    });
+  }
+
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase();
+    filtered = filtered.filter(m =>
+      (m.description  || '').toLowerCase().includes(q) ||
+      (m.comment      || '').toLowerCase().includes(q) ||
+      (m.account_name || '').toLowerCase().includes(q)
+    );
+  }
+
+  document.getElementById('list-count').textContent = `${filtered.length} resultado${filtered.length !== 1 ? 's' : ''}`;
+
+  if (!filtered.length) {
+    document.getElementById('list-inner').innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">${movements.length ? '🔍' : '🏦'}</div>
+        <div class="empty-title">${movements.length ? 'Sin resultados' : 'Sin movimientos'}</div>
+        <div class="empty-msg">${movements.length ? 'Prueba otro filtro o búsqueda.' : 'Conecta tu banco y presiona Actualizar.'}</div>
+      </div>`;
+    return;
+  }
+
+  // Group by date
+  const groups = {};
+  filtered.forEach(m => {
+    const d = (m.post_date || m.transaction_date || '').slice(0, 10);
+    if (!groups[d]) groups[d] = [];
+    groups[d].push(m);
+  });
+
+  const dates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+  let html = '', delay = 0;
+
+  dates.forEach(date => {
+    html += `<div class="date-div"><span class="date-div-label">${fmtDate(date)}</span><div class="date-div-line"></div></div>`;
+    groups[date].forEach(m => {
+      const isNew    = newIds.has(m.id);
+      const isIncome = m.amount > 0;
+      const idx      = movements.indexOf(m);
+      html += `
+        <div class="mov-item${isNew ? ' is-new' : ''}" style="animation-delay:${delay}ms" onclick="openSheet(${idx})">
+          <div class="mov-icon">${getIcon(m.type, isIncome)}</div>
+          <div class="mov-body">
+            <div class="mov-desc">${m.description || 'Movimiento'}</div>
+            <div class="mov-tags">
+              <span class="mov-tag">${m.type || 'otro'}</span>
+              ${m.pending ? '<span class="mov-tag pend">Pendiente</span>' : ''}
+              ${isNew ? '<span class="mov-tag new">Nuevo</span>' : ''}
+            </div>
+          </div>
+          <div class="mov-right">
+            <div class="mov-amount ${isIncome ? 'inc' : 'exp'}">${isIncome ? '+' : ''}${clp(m.amount)}</div>
+            ${m.account_name ? `<div class="mov-acct">${m.account_name}</div>` : ''}
+          </div>
+        </div>`;
+      delay = Math.min(delay + 18, 280);
+    });
+  });
+
+  document.getElementById('list-inner').innerHTML = html;
+}
+
+// ─── Detail sheet ────────────────────────────
+function openSheet(idx) {
+  const m = movements[idx];
+  if (!m) return;
+  const isIncome = m.amount > 0;
+
+  document.getElementById('sheet-amount').className = `sheet-amount ${isIncome ? 'inc' : 'exp'}`;
+  document.getElementById('sheet-amount').textContent = `${isIncome ? '+' : ''}${clp(m.amount)}`;
+  document.getElementById('sheet-desc').textContent   = m.description || 'Sin descripción';
+
+  const rows = [];
+  if (m.post_date)         rows.push(['Fecha',        fmtDate(m.post_date.slice(0,10)), false]);
+  if (m.transaction_date)  rows.push(['Transacción',  fmtDate(m.transaction_date.slice(0,10)), false]);
+  rows.push(['Tipo',   m.type || '—',   false]);
+  rows.push(['Estado', m.pending ? '⏳ Pendiente' : '✅ Confirmado', false]);
+  if (m.currency)      rows.push(['Moneda',    m.currency,     false]);
+  if (m.reference_id)  rows.push(['Referencia', m.reference_id, true]);
+  if (m.comment)       rows.push(['Comentario', m.comment,      false]);
+  if (m.account_name)  rows.push(['Cuenta',     m.account_name, false]);
+
+  const s = typeof m.sender_data === 'string' ? JSON.parse(m.sender_data || 'null') : m.sender_data;
+  const r = typeof m.recipient_data === 'string' ? JSON.parse(m.recipient_data || 'null') : m.recipient_data;
+
+  if (s?.holder_name) rows.push(['Remitente',   s.holder_name, false]);
+  if (s?.number)      rows.push(['Cta. origen', s.number,      true]);
+  if (s?.institution?.name) rows.push(['Banco origen', s.institution.name, false]);
+  if (r?.holder_name) rows.push(['Destinatario',r.holder_name, false]);
+  if (r?.number)      rows.push(['Cta. destino',r.number,      true]);
+  if (r?.institution?.name) rows.push(['Banco destino', r.institution.name, false]);
+
+  document.getElementById('sheet-rows').innerHTML = rows.map(([k, v, mono]) =>
+    `<div class="sheet-row">
+      <span class="sheet-key">${k}</span>
+      <span class="sheet-val${mono ? ' mono' : ''}">${v}</span>
+    </div>`).join('');
+
+  document.getElementById('sheet-overlay').classList.add('open');
+}
+
+function closeSheet(e) {
+  if (!e || e.target === document.getElementById('sheet-overlay'))
+    document.getElementById('sheet-overlay').classList.remove('open');
+}
+
+// ─── Helpers ─────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+
+function showBadge(msg) {
+  const b = document.getElementById('new-badge');
+  b.textContent = msg;
+  b.style.display = 'inline-block';
+}
+
+function hideBadge() {
+  document.getElementById('new-badge').style.display = 'none';
+}
+
+let toastTimer;
+function toast(msg, color = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${color} show`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+function clp(n) {
+  return '$' + Math.abs(n).toLocaleString('es-CL', { maximumFractionDigits: 0 });
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  const dt   = new Date(d + 'T12:00:00');
+  const now  = new Date();
+  const yest = new Date(now); yest.setDate(now.getDate() - 1);
+  if (dt.toDateString() === now.toDateString())  return 'Hoy';
+  if (dt.toDateString() === yest.toDateString()) return 'Ayer';
+  return dt.toLocaleDateString('es-CL', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+function getIcon(type, isIncome) {
+  return { transfer: isIncome ? '📥' : '📤', charge: '💳', deposit: '🏦', withdrawal: '🏧', payment: '💸' }[type] || (isIncome ? '⬆️' : '⬇️');
+}
+
+// ─── Start ───────────────────────────────────
+boot();
+</script>
+</body>
+</html>
