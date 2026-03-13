@@ -954,7 +954,10 @@ async function openWidget() {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     });
     const data = await r.json();
-    if (!data.ok) throw new Error(data.error || 'No se pudo crear el Link Intent');
+    if (!r.ok || !data.widget_token) {
+      const detail = data?.detail ? `: ${JSON.stringify(data.detail)}` : '';
+      throw new Error((data.error || 'No se pudo crear el Link Intent') + detail);
+    }
     widgetToken = data.widget_token;
   } catch(e) {
     toast(`Error: ${e.message}`, 'red'); return;

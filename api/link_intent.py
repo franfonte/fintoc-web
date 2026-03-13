@@ -79,7 +79,7 @@ class handler(BaseHTTPRequestHandler):
         if not widget_token:
             self._json({"error": "Fintoc did not return a widget_token", "detail": data}, 502); return
 
-        self._json({"widget_token": widget_token})
+        self._json({"ok": True, "widget_token": widget_token})
 
     def _json(self, data, status=200):
         body = json.dumps(data).encode()
