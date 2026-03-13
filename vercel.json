@@ -4,7 +4,7 @@
     {
       "src": "api/**/*.py",
       "use": "@vercel/python",
-      "config": { "maxDuration": 60 }
+      "config": { "maxDuration": 30 }
     },
     {
       "src": "public/**",
@@ -12,7 +12,11 @@
     }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1.py" },
-    { "src": "/(.*)",     "dest": "/public/$1" }
+    { "src": "/api/config",    "dest": "/api/config.py" },
+    { "src": "/api/connect",   "dest": "/api/connect.py" },
+    { "src": "/api/sync",      "dest": "/api/sync.py" },
+    { "src": "/api/movements", "dest": "/api/movements.py" },
+    { "src": "/",              "dest": "/public/index.html" },
+    { "src": "/(.*)",          "dest": "/public/$1" }
   ]
 }
