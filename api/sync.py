@@ -5,6 +5,8 @@ and saves them to Supabase for the authenticated user.
 """
 from http.server import BaseHTTPRequestHandler
 import json, os, requests
+import sys, os
+sys.path.insert(0, os.path.dirname(__file__))
 from _lib.auth import require_user
 from _lib.db import supabase_admin
 

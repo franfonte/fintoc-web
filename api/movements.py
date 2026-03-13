@@ -6,6 +6,8 @@ Query params: page (default 1), per_page (default 100), type, search
 from http.server import BaseHTTPRequestHandler
 import json
 from urllib.parse import urlparse, parse_qs
+import sys, os
+sys.path.insert(0, os.path.dirname(__file__))
 from _lib.auth import require_user
 from _lib.db import supabase_admin
 
