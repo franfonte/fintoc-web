@@ -37,11 +37,13 @@ class handler(BaseHTTPRequestHandler):
             self._json({"error": "exchange_token required"}, 400); return
 
         # Exchange token for link_token via Fintoc
+        # Fintoc Exchange endpoint is GET /v1/links/exchange with
+        # exchange_token as a query param.
         try:
-            r = requests.post(
+            r = requests.get(
                 f"{FINTOC_BASE}/links/exchange",
                 headers={"Authorization": FINTOC_SECRET},
-                json={"exchange_token": exchange_token},
+                params={"exchange_token": exchange_token},
                 timeout=10,
             )
             r.raise_for_status()

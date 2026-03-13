@@ -12,7 +12,7 @@ Security notes:
     not the link_token (that only exists after this call succeeds).
   - The link_token is stored server-side and never sent to the browser.
 
-Fintoc docs: POST /v1/links/exchange
+Fintoc docs: GET /v1/links/exchange
 """
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
@@ -47,13 +47,15 @@ class handler(BaseHTTPRequestHandler):
             self._json({"error": "exchange_token is required"}, 400); return
 
         # ── Step 1: Exchange the temporary token for a permanent link_token ──
+        # Fintoc Exchange endpoint is GET /v1/links/exchange with
+        # exchange_token as a query param.
         # Authorization here is the global secret key — the link_token
         # doesn't exist yet at this point in the flow.
         try:
-            r = requests.post(
+            r = requests.get(
                 f"{FINTOC_BASE}/links/exchange",
                 headers={"Authorization": FINTOC_SECRET},
-                json={"exchange_token": exchange_token},
+                params={"exchange_token": exchange_token},
                 timeout=10,
             )
             r.raise_for_status()
